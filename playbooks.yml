@@ -1,0 +1,74 @@
+---
+- hosts: staging
+  gather_facts: yes
+  become: yes
+  vars:
+    rbenv:
+      env: user
+      version: v1.2.0
+      default_ruby: 3.1.2
+      rubies:
+      - version: 3.1.2
+    rbenv_repo: "https://github.com/rbenv/rbenv.git"
+  roles:
+    - role: zzet.rbenv
+      rbenv_users:
+        - root
+  pre_tasks:
+  - name: Install required packaged
+    apt:
+      name: "{{ item }}"
+      state: present
+    with_items:
+      - acl
+      - build-essential
+      - libpq-dev
+      - imagemagick
+      - libvips
+      - curl
+      - gnupg
+      - nginx
+      - libsodium-dev
+  - name: Setup Node
+    become: yes
+    become_flags: -i
+    become_user: root
+    block:
+      - name: Install nvm
+        become: yes
+        ansible.builtin.shell: >
+          curl -o- https://raw.githubusercontent.com/creationix/nvm/v0.39.1/install.sh | bash
+        args:
+          executable: /bin/bash
+          chdir: "$HOME"
+          creates: "$HOME/.nvm/nvm.sh"
+
+      - name: Install node
+        become: yes
+        shell: >
+          . {{ ansible_env.HOME }}/.nvm/nvm.sh && nvm install {{ item }}
+        args:
+          executable: /bin/bash
+          chdir: "{{ ansible_env.HOME }}"
+          creates: "{{ ansible_env.HOME }}/.nvm/versions/{{ item }}"
+        loop:
+          - 16.16.0
+      - name: Install yarn and tailwindcss
+        ansible.builtin.shell: |
+          npm install tailwindcss --location=global
+  tasks:
+  - name: Copy credentials and trans to server
+    ansible.builtin.copy:
+      src: ~/work/project-foler/config/credentials/staging.key
+      dest: /home/ubuntu/projects/shared/config/credentials/staging.key
+      owner: ubuntu
+  - name: Copy puma config to server
+    ansible.builtin.copy:
+      src: ./files/puma.service
+      dest: /etc/systemd/system/puma.service
+      owner: ubuntu
+  - name: Start Puma server
+    ansible.builtin.shell: |
+      sudo systemctl daemon-reload
+      bundle binstubs puma --path /usr/local/bin/
+      sudo service puma start

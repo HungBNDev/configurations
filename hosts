@@ -1,0 +1,6 @@
+[staging]
+#your_public_ip_host
+[staging:vars]
+ansible_port=22
+ansible_ssh_user=ubuntu
+ansible_ssh_private_key_file=~/secrets/your-key-file.pem

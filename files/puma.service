@@ -1,0 +1,14 @@
+[Unit]
+Description=Puma Rails Server
+After=network.target
+
+[Service]
+Type=simple
+
+WorkingDirectory=/home/ubuntu/projects/current
+Environment=RAILS_ENV=staging
+ExecStart=/home/ubuntu/.rbenv/shims/bundle exec puma -C /home/ubuntu/projects/current/config/puma.rb
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
